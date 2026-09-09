@@ -1,4 +1,9 @@
+from src.database import initialize_database
+
+
 def main():
+    initialize_database()
+
     print("=" * 45)
     print("       PRGI TITLE VERIFICATION SYSTEM")
     print("=" * 45)
