@@ -1,46 +1,29 @@
-PREFIXES = [
-    "the",
-    "new",
-    "daily",
-    "weekly",
-    "monthly",
-]
-
-SUFFIXES = [
-    "news",
-    "times",
-    "today",
-    "india",
-    "express",
-]
+RESTRICTED_WORDS = {
+    "police",
+    "crime",
+    "corruption",
+    "cbi",
+    "cid",
+    "army",
+}
 
 
-def extract_prefix(title: str) -> str:
-    words = title.lower().strip().split()
+def find_restricted_words(title: str) -> list[str]:
+    words = title.lower().split()
 
-    if not words:
-        return ""
+    found = []
 
-    if words[0] in PREFIXES:
-        return words[0]
+    for word in words:
+        if word in RESTRICTED_WORDS:
+            found.append(word)
 
-    return ""
-
-
-def extract_suffix(title: str) -> str:
-    words = title.lower().strip().split()
-
-    if not words:
-        return ""
-
-    if words[-1] in SUFFIXES:
-        return words[-1]
-
-    return ""
+    return found
 
 
-def check_prefix_suffix(title: str) -> dict:
+def validate_restricted_words(title: str) -> dict:
+    restricted_words = find_restricted_words(title)
+
     return {
-        "prefix": extract_prefix(title),
-        "suffix": extract_suffix(title),
+        "valid": len(restricted_words) == 0,
+        "restricted_words": restricted_words,
     }
