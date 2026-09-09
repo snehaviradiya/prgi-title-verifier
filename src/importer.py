@@ -1,6 +1,7 @@
 import csv
 
 from src.database import get_connection
+from src.normalization import normalize_title
 
 
 def import_titles(file_path):
@@ -18,12 +19,22 @@ def import_titles(file_path):
             if not title:
                 continue
 
+            normalized_title = normalize_title(title)
+
             connection.execute(
                 """
-                INSERT INTO titles (title, source)
-                VALUES (?, ?)
+                INSERT INTO titles (
+                    title,
+                    normalized_title,
+                    source
+                )
+                VALUES (?, ?, ?)
                 """,
-                (title, source),
+                (
+                    title,
+                    normalized_title,
+                    source,
+                ),
             )
 
             count += 1
@@ -37,4 +48,3 @@ def import_titles(file_path):
 if __name__ == "__main__":
     count = import_titles("data/titles.csv")
     print(f"Imported {count} titles.")
-    
