@@ -2,6 +2,7 @@ import csv
 
 from src.database import get_connection
 from src.normalization import normalize_title
+from src.phonetic import phonetic_key
 
 
 def import_titles(file_path):
@@ -20,19 +21,22 @@ def import_titles(file_path):
                 continue
 
             normalized_title = normalize_title(title)
+            title_phonetic_key = phonetic_key(title)
 
             connection.execute(
                 """
                 INSERT INTO titles (
                     title,
                     normalized_title,
+                    phonetic_key,
                     source
                 )
-                VALUES (?, ?, ?)
+                VALUES (?, ?, ?, ?)
                 """,
                 (
                     title,
                     normalized_title,
+                    title_phonetic_key,
                     source,
                 ),
             )
