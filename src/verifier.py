@@ -10,9 +10,13 @@ from src.search import search_candidates
 from src.similarity import calculate_similarity
 
 
+SIMILARITY_THRESHOLD = 80.0
+
+
 def verify_title(title: str) -> dict:
     """
-    Run all current title verification checks.
+    Run all title verification checks and generate
+    a unified verification result.
     """
 
     restricted = validate_restricted_words(title)
@@ -45,14 +49,9 @@ def verify_title(title: str) -> dict:
             existing_title,
         )
 
-        if fuzzy_score > highest_fuzzy:
-            highest_fuzzy = fuzzy_score
-
-        if phonetic_score > highest_phonetic:
-            highest_phonetic = phonetic_score
-
-        if semantic_score > highest_semantic:
-            highest_semantic = semantic_score
+        highest_fuzzy = max(highest_fuzzy, fuzzy_score)
+        highest_phonetic = max(highest_phonetic, phonetic_score)
+        highest_semantic = max(highest_semantic, semantic_score)
 
         combined_score = max(
             fuzzy_score,
@@ -66,24 +65,45 @@ def verify_title(title: str) -> dict:
                 "score": combined_score,
             }
 
-    # Start with the strongest similarity signal.
     similarity_score = max(
         highest_fuzzy,
         highest_phonetic,
         highest_semantic,
     )
 
-    # Hard rules override similarity.
-    rejected_by_rule = (
-        not restricted["valid"]
-        or combination["detected"]
-        or periodicity["detected"]
+    acceptance_probability = round(
+        max(0.0, 100.0 - similarity_score),
+        2,
     )
 
-    # MVP threshold.
-    if rejected_by_rule:
-        decision = "REJECTED"
-    elif similarity_score >= 80:
+    rejection_reasons = []
+
+    if restricted["restricted_words"]:
+        for word in restricted["restricted_words"]:
+            rejection_reasons.append(
+                f"Restricted word detected: {word}"
+            )
+
+    if combination["detected"]:
+        rejection_reasons.append(
+            "Title appears to combine existing titles"
+        )
+
+    if periodicity["detected"]:
+        for existing_title in periodicity["matching_titles"]:
+            rejection_reasons.append(
+                f"Periodicity modification of existing title: "
+                f"{existing_title}"
+            )
+
+    if similarity_score >= SIMILARITY_THRESHOLD:
+        if best_match:
+            rejection_reasons.append(
+                f"High similarity with existing title: "
+                f"{best_match['title']}"
+            )
+
+    if rejection_reasons:
         decision = "REJECTED"
     else:
         decision = "LIKELY ACCEPTED"
@@ -91,11 +111,13 @@ def verify_title(title: str) -> dict:
     return {
         "title": title,
         "decision": decision,
-        "similarity_score": round(similarity_score, 2),
+        "similarity_score": similarity_score,
+        "acceptance_probability": acceptance_probability,
         "fuzzy_score": round(highest_fuzzy, 2),
         "phonetic_score": round(highest_phonetic, 2),
         "semantic_score": round(highest_semantic, 2),
         "best_match": best_match,
+        "rejection_reasons": rejection_reasons,
         "restricted_words": restricted["restricted_words"],
         "combination_detected": combination["detected"],
         "combination_matches": combination["matching_titles"],
@@ -118,11 +140,24 @@ if __name__ == "__main__":
         result = verify_title(example)
 
         print()
-        print("=" * 50)
+        print("=" * 55)
         print(f"Title: {result['title']}")
         print(f"Decision: {result['decision']}")
         print(f"Similarity: {result['similarity_score']}%")
-        print(f"Best match: {result['best_match']}")
-        print(f"Restricted words: {result['restricted_words']}")
-        print(f"Combination: {result['combination_detected']}")
-        print(f"Periodicity: {result['periodicity_detected']}")
+        print(
+            f"Acceptance probability: "
+            f"{result['acceptance_probability']}%"
+        )
+
+        if result["best_match"]:
+            print(
+                f"Best match: "
+                f"{result['best_match']['title']} "
+                f"({result['best_match']['score']}%)"
+            )
+
+        if result["rejection_reasons"]:
+            print("Reasons:")
+
+            for reason in result["rejection_reasons"]:
+                print(f"- {reason}")
