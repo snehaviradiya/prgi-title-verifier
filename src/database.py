@@ -34,6 +34,28 @@ def initialize_database():
         ON titles(phonetic_key)
     """)
 
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS applications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            normalized_title TEXT,
+            status TEXT NOT NULL,
+            similarity_score REAL,
+            rejection_reason TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    connection.execute("""
+        CREATE INDEX IF NOT EXISTS idx_application_title
+        ON applications(normalized_title)
+    """)
+
+    connection.execute("""
+        CREATE INDEX IF NOT EXISTS idx_application_status
+        ON applications(status)
+    """)
+
     connection.commit()
     connection.close()
 
