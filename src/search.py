@@ -6,10 +6,8 @@ from src.similarity import calculate_similarity
 
 def search_candidates(title: str, limit: int = 20):
     """
-    Find potentially similar existing titles.
-
-    The database is used to narrow candidates before
-    fuzzy similarity is calculated.
+    Find potentially similar existing titles and
+    pending applications.
     """
 
     normalized = normalize_title(title)
@@ -20,7 +18,7 @@ def search_candidates(title: str, limit: int = 20):
 
     connection = get_connection()
 
-    rows = connection.execute(
+    title_rows = connection.execute(
         """
         SELECT id, title, normalized_title, phonetic_key, source
         FROM titles
@@ -35,11 +33,25 @@ def search_candidates(title: str, limit: int = 20):
         ),
     ).fetchall()
 
+    application_rows = connection.execute(
+        """
+        SELECT id, title, normalized_title
+        FROM applications
+        WHERE status = 'PENDING'
+          AND normalized_title LIKE ?
+        LIMIT ?
+        """,
+        (
+            f"%{normalized}%",
+            limit,
+        ),
+    ).fetchall()
+
     connection.close()
 
     results = []
 
-    for row in rows:
+    for row in title_rows:
         similarity = calculate_similarity(
             normalized,
             row[2],
@@ -51,6 +63,23 @@ def search_candidates(title: str, limit: int = 20):
                 "title": row[1],
                 "similarity": similarity,
                 "source": row[4],
+                "type": "existing",
+            }
+        )
+
+    for row in application_rows:
+        similarity = calculate_similarity(
+            normalized,
+            row[2],
+        )
+
+        results.append(
+            {
+                "id": row[0],
+                "title": row[1],
+                "similarity": similarity,
+                "source": "Pending Application",
+                "type": "application",
             }
         )
 
@@ -59,7 +88,7 @@ def search_candidates(title: str, limit: int = 20):
         reverse=True,
     )
 
-    return results
+    return results[:limit]
 
 
 if __name__ == "__main__":
@@ -68,5 +97,6 @@ if __name__ == "__main__":
     for result in results:
         print(
             f"{result['title']}: "
-            f"{result['similarity']}%"
+            f"{result['similarity']}% "
+            f"({result['type']})"
         )
