@@ -10,6 +10,23 @@ def get_connection():
     return sqlite3.connect(DATABASE_PATH)
 
 
+def add_application_phonetic_column(connection):
+    columns = connection.execute(
+        "PRAGMA table_info(applications)"
+    ).fetchall()
+
+    column_names = {
+        column[1]
+        for column in columns
+    }
+
+    if "phonetic_key" not in column_names:
+        connection.execute("""
+            ALTER TABLE applications
+            ADD COLUMN phonetic_key TEXT
+        """)
+
+
 def initialize_database():
     connection = get_connection()
 
@@ -46,6 +63,8 @@ def initialize_database():
         )
     """)
 
+    add_application_phonetic_column(connection)
+
     connection.execute("""
         CREATE INDEX IF NOT EXISTS idx_application_title
         ON applications(normalized_title)
@@ -54,6 +73,11 @@ def initialize_database():
     connection.execute("""
         CREATE INDEX IF NOT EXISTS idx_application_status
         ON applications(status)
+    """)
+
+    connection.execute("""
+        CREATE INDEX IF NOT EXISTS idx_application_phonetic
+        ON applications(phonetic_key)
     """)
 
     connection.commit()

@@ -35,14 +35,18 @@ def search_candidates(title: str, limit: int = 20):
 
     application_rows = connection.execute(
         """
-        SELECT id, title, normalized_title
+        SELECT id, title, normalized_title, phonetic_key
         FROM applications
         WHERE status = 'PENDING'
-          AND normalized_title LIKE ?
+          AND (
+              normalized_title LIKE ?
+              OR phonetic_key LIKE ?
+          )
         LIMIT ?
         """,
         (
             f"%{normalized}%",
+            f"%{phonetic}%",
             limit,
         ),
     ).fetchall()

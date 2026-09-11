@@ -1,5 +1,6 @@
 from src.database import get_connection
 from src.normalization import normalize_title
+from src.phonetic import phonetic_key
 
 
 def create_application(
@@ -13,6 +14,7 @@ def create_application(
     """
 
     normalized_title = normalize_title(title)
+    title_phonetic_key = phonetic_key(title)
 
     connection = get_connection()
 
@@ -21,15 +23,17 @@ def create_application(
         INSERT INTO applications (
             title,
             normalized_title,
+            phonetic_key,
             status,
             similarity_score,
             rejection_reason
         )
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
         """,
         (
             title,
             normalized_title,
+            title_phonetic_key,
             status,
             similarity_score,
             rejection_reason,
@@ -92,4 +96,3 @@ if __name__ == "__main__":
 
     for application in get_applications():
         print(application)
-        
